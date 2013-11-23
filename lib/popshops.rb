@@ -45,6 +45,45 @@ class Popshops
     results = self.class.get("https://www.popshops.com/v2/#{@api_key}/catalogs/list.xml?private_api_key=#{@private_api_key}")
     Hashie::Mash.new(results['results']['catalogs'])
   end
+
+  # Activates merchants for the given catalog by network_merchant_id.
+  #
+  # Note from PopShops
+  # network merchant ids is a string
+  # this actually has to be a combination value of the Rakuten PopShops' network id and the network merchant id.
+  # These are combined using a    dash '-' character like: {network_id}-{network_merchant_id}.
+
+  # For example, if you wanted to add 'Things From Another World' (network_merchant_id=8908) from the ShareASale network (network_id = 1).
+  # By adding the two values together you get the following network_merchant_id: 1-8908.
+
+  # You would pass in the following: network_merchant_id=1-8908
+  # For example: network_merchant_ids = '1-8908, 2-3233'
+  def activate_network_merchants(catalog_key, network_merchant_ids)
+    update_catalog(catalog_key, {:network_merchant_id => network_merchant_ids, :active => 1})
+  end
+
+  # Deactivates merchants for the given catalog by network_merchant_id.
+  #
+  # Note from PopShops
+  # network merchant ids is a string
+  # this actually has to be a combination value of the Rakuten PopShops' network id and the network merchant id.
+  # These are combined using a    dash '-' character like: {network_id}-{network_merchant_id}.
+
+  # For example, if you wanted to add 'Things From Another World' (network_merchant_id=8908) from the ShareASale network (network_id = 1).
+  # By adding the two values together you get the following network_merchant_id: 1-8908.
+
+  # You would pass in the following: network_merchant_id=1-8908
+  # For example: network_merchant_ids is '1-8908, 2-3233'
+  def deactivate_network_merchants(catalog_key, network_merchant_ids)
+    update_catalog(catalog_key, {:network_merchant_id => network_merchant_ids, :active => 0})
+  end
+
+  def update_catalog(catalog_key, options)
+    raise 'Missing private api key' if @private_api_key.nil?
+    options = options.merge({:catalog_key => catalog_key, :private_api_key => @private_api_key})
+    results = self.class.post(base_catalog_update_url, :query => options)
+    Hashie::Mash.new(results['response'])
+  end
   
   # Activates merchants for the given catalog.
   #
@@ -64,10 +103,13 @@ class Popshops
   
   private
     def catalog_update_url(catalog_key, merchants)
-      "https://www.popshops.com/v2/#{@api_key}/catalogs/update.xml?catalog_key=#{catalog_key}&private_api_key=#{@private_api_key}&merchant_id=#{normalize_merchants(merchants)}"
+      "#{base_catalog_update_url}?catalog_key=#{catalog_key}&private_api_key=#{@private_api_key}&merchant_id=#{normalize_merchants(merchants)}"
     end
     
     def normalize_merchants(merchants)
       merchants.is_a?(Array) ? merchants.join(',') : merchants
+    end
+    def base_catalog_update_url
+      "https://www.popshops.com/v2/#{@api_key}/catalogs/update.xml"
     end
 end
